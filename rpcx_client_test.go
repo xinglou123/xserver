@@ -13,16 +13,17 @@ func TestClient(t *testing.T) {
 	param["limit"] = 10
 
 	req := Request{
-		ServicePath:   "logger",
+		ServicePath:   "Logger",
 		ServiceMethod: "List",
 		Params:        param,
 	}
-	rpcx, _ := NewClientRPCX(Config{Address: []string{"127.0.0.1:8973"}, ServicePath: "Logger"})
-	defer rpcx.Close()
+
 	for a := 0; a < 20; a++ {
 		start := time.Now()
+		rpcx, _ := NewClientRPCX(Config{Address: []string{"127.0.0.1:8972"}, ServicePath: "Logger"})
+		defer rpcx.Close()
 		reply, _ := rpcx.Call(req)
-		latency := time.Since(start).Seconds()
+		latency := fmt.Sprintf("%dms", time.Since(start).Nanoseconds()/1e6)
 		fmt.Println(latency)
 		fmt.Println(reply)
 	}

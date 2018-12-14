@@ -3,6 +3,7 @@ package xserver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/smallnest/rpcx/client"
 )
 
@@ -26,16 +27,18 @@ func NewClientRPCX(cfg Config) (c ClientRPCX, err error) {
 	} else {
 		d = client.NewPeer2PeerDiscovery("tcp@"+cfg.Address[0], cfg.Meta)
 	}
-
-	xclient := client.NewXClient("", client.Failtry, client.RandomSelect, d, client.DefaultOption)
-	c.mclient = xclient
+	if len(cfg.ServicePath) == 0 {
+		err = errors.New("ServicePath must be specified")
+		return
+	}
+	c.mclient = client.NewXClient(cfg.ServicePath, client.Failtry, client.RandomSelect, d, client.DefaultOption)
 
 	return
 }
 
 func (c *ClientRPCX) CallWithContext(ctx context.Context, req Request) (reply *Response, err error) {
-	reply = new(Response)
 	if c.mclient != nil {
+		reply = new(Response)
 		err = c.mclient.Call(ctx, req.ServiceMethod, req.Params, reply)
 	} else {
 		err = errors.New("client.XClient is nil")
@@ -44,8 +47,9 @@ func (c *ClientRPCX) CallWithContext(ctx context.Context, req Request) (reply *R
 }
 
 func (c *ClientRPCX) Call(req Request) (reply *Response, err error) {
-	reply = new(Response)
+	fmt.Println(req)
 	if c.mclient != nil {
+		reply = new(Response)
 		err = c.mclient.Call(context.Background(), req.ServiceMethod, req.Params, reply)
 	} else {
 		err = errors.New("client.XClient is nil")

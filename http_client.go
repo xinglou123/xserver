@@ -3,42 +3,44 @@ package xserver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
-type ClientH struct {
-	client  *http.Client
-	address string
+type ClientHttp struct {
+	client *http.Client
+	conf   Config
 }
 
-type ClientHConfig struct {
-	RootCertificate string
-	Address         string
-}
-
-func NewClientH(cfg ClientHConfig) (c ClientH, err error) {
-	if cfg.Address == "" {
+func NewClientHttp(cfg Config) (c ClientHttp, err error) {
+	if len(cfg.Address) == 0 {
 		err = errors.New("Address must be non-empty")
-		return
-	}
-
-	if cfg.RootCertificate == "" {
-		err = errors.New("RootCertificate must be specified")
-		return
 	}
 
 	c.client = &http.Client{}
 
-	c.address = cfg.Address
+	c.conf = cfg
 
 	return
 }
-
-func (c *ClientH) UploadFile(ctx context.Context, f string) (err error) {
-
+func (c *ClientHttp) Call(ctx context.Context, req Request) (reply *Response, err error) {
+	fmt.Println(req)
+	if c.client != nil {
+		req, err := http.NewRequest("POST", c.conf.Address[0]+"/"+c.conf.ServicePath, nil)
+		if err != nil {
+			return nil, errors.New("failed to create POST request")
+		}
+		resp, err := c.client.Do(req)
+		if err != nil {
+			return nil, errors.New("request failed")
+		}
+		reply = new(Response)
+		reply.Code = resp.StatusCode
+		reply.Data = resp
+	}
 	return
 }
 
-func (c *ClientH) Close() {
+func (c *ClientHttp) Close() {
 	return
 }

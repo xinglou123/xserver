@@ -10,23 +10,27 @@ type ServerRPCX struct {
 	conf   Config
 }
 
-type ServerRPCXConfig struct {
-	Port string
-}
-
 func NewServerRPCX(cfg Config) (s ServerRPCX, err error) {
 
 	if len(cfg.Address) == 0 {
-		err = errors.New("Port must be specified")
+		err = errors.New("address must be specified")
 		return
 	}
 	s.conf = cfg
+	s.server = server.NewServer()
+	if s.server == nil {
+		err = errors.New("s.server is nil")
+		return
+	}
 	return
 }
 
 func (s *ServerRPCX) Listen() (err error) {
-	s.server = server.NewServer()
-	err = s.server.Serve("tcp", ":"+s.conf.Address[0])
+	if s.server == nil {
+		err = errors.New("s.server is nil")
+		return
+	}
+	err = s.server.Serve("tcp", s.conf.Address[0])
 	if err != nil {
 		err = errors.New("errored listening for rpcx connections")
 		return

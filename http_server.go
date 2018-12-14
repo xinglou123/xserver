@@ -2,78 +2,45 @@ package xserver
 
 import (
 	"errors"
+	"fmt"
+	"github.com/facebookgo/grace/gracehttp"
+	"github.com/gin-gonic/gin"
 	"net/http"
-	"strconv"
+	"time"
 )
 
-type ServerH struct {
-	server      *http.Server
-	certificate string
-	key         string
+type ServerHttp struct {
+	Server *http.Server
+	Router *gin.Engine
+	conf   Config
 }
 
-type ServerHConfig struct {
-	Port        int
-	Certificate string
-	Key         string
+func NewServerHttp(cfg Config) (s ServerHttp, err error) {
+	if len(cfg.Address) == 0 {
+		err = errors.New("address must be specified")
+		return
+	}
+	return ServerHttp{conf: cfg}, nil
 }
 
-func NewServerH(cfg ServerHConfig) (s ServerH, err error) {
-	if cfg.Port == 0 {
-		err = errors.New("Port must be non-zero")
-		return
+func (s *ServerHttp) Listen() (err error) {
+	fmt.Println("server start")
+	s.Server = &http.Server{
+		Addr:         s.conf.Address[0],
+		Handler:      s.Router,
+		ReadTimeout:  time.Duration(s.conf.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(s.conf.WriteTimeout) * time.Second,
 	}
-
-	if cfg.Certificate == "" {
-		err = errors.New("Certificate must be specified")
-		return
+	fmt.Println("Start Listening and serving HTTP on " + s.conf.Address[0])
+	if err := gracehttp.Serve(s.Server); err != nil {
+		return errors.New("failed during server listen and serve")
 	}
-
-	if cfg.Key == "" {
-		err = errors.New("Key must be specified")
-		return
-	}
-
-	s.server = &http.Server{
-		Addr: ":" + strconv.Itoa(cfg.Port),
-	}
-
-	s.certificate = cfg.Certificate
-	s.key = cfg.Key
-
-	http.HandleFunc("/upload", s.Upload)
-
 	return
 }
 
-func (s *ServerH) Listen() (err error) {
-	err = s.server.ListenAndServeTLS(
-		s.certificate, s.key)
-	if err != nil {
-		err = errors.New("failed during server listen and serve")
-		return
+func (s *ServerHttp) Close() {
+	if s.Server != nil {
+		s.Server.Close()
 	}
-
-	return
-}
-
-func (s *ServerH) Upload(w http.ResponseWriter, r *http.Request) {
-	//var (
-	//	err           error
-	//	bytesReceived int64 = 0
-	//	buf                 = new(bytes.Buffer)
-	//)
-	//
-	//bytesReceived, err = io.Copy(buf, r.Body)
-	//if err != nil {
-	//	w.WriteHeader(http.StatusInternalServerError)
-	//	fmt.Fprint(w, "%+v", err)
-	//	return
-	//}
-
-	return
-}
-
-func (s *ServerH) Close() {
-	return
+	fmt.Println("shutdown server successfully")
 }
